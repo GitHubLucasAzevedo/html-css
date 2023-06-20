@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo das Bactérias</title>
+    <style>
+        body {
+            text-align: center;
+            background-image: url(https://vanessalobato.com.br/wp-content/uploads/2019/09/intestino.png);
+            background-size: cover;
+        }
+
+        .cell {
+            width: 30px;
+            height: 30px;
+            border: 1px solid black;
+            display: inline-block;
+        }
+
+        .good-bacteria {
+            background-color: green;
+        }
+
+        .bad-bacteria {
+            background-color: red;
+        }
+
+        .masked {
+            background-color: rgb(119, 118, 118);
+        }
+
+        .ranking-container {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+        }
+
+        .ranking-table {
+            width: 30%;
+            margin-bottom: 20px;
+            background-color: #ffffff;
+            border: 2px solid #333333;
+            border-radius: 5px;
+            display: inline-block;
+            text-align: left;
+        }
+
+        .ranking-table h3 {
+            margin-top: 0;
+            padding: 10px;
+            background-color: #333333;
+            color: #ffffff;
+            border-radius: 5px 5px 0 0;
+        }
+
+        .ranking-table table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .ranking-table td, .ranking-table th {
+            padding: 8px;
+            border-bottom: 1px solid #000000;
+        }
+
+        .ranking-table td:last-child, .ranking-table th:last-child {
+            border-right: none;
+        }
+
+        .ranking-table th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+    <h1>Jogo das Bactérias</h1>
+    <h2>Informe seu nome:</h2>
+    <input type="text" id="playerName">
+    <br><br>
+    <button onclick="startGame('easy')">Fácil</button>
+    <button onclick="startGame('medium')">Médio</button>
+    <button onclick="startGame('hard')">Difícil</button>
+    <div id="game"></div>
+    <div id="bacteriaCount"></div>
+    <div id="badBacteriaCount"></div>
+    <div class="ranking-container">
+        <div class="ranking-table">
+            <h3>Ranking - Fácil</h3>
+            <table id="rankingEasy">
+                <tr>
+                    <th>Posição</th>
+                    <th>Jogador</th>
+                    <th>Acertos</th>
+                </tr>
+            </table>
+        </div>
+        <div class="ranking-table">
+            <h3>Ranking - Médio</h3>
+            <table id="rankingMedium">
+                <tr>
+                    <th>Posição</th>
+                    <th>Jogador</th>
+                    <th>Acertos</th>
+                </tr>
+            </table>
+        </div>
+        <div class="ranking-table">
+            <h3>Ranking - Difícil</h3>
+            <table id="rankingHard">
+                <tr>
+                    <th>Posição</th>
+                    <th>Jogador</th>
+                    <th>Acertos</th>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <button onclick="newGame()">Nova Partida</button>
+
+    <script>
+        var rows, cols, totalBadBacteria;
+        var gameGrid = [];
+        var uncoveredCells = 0;
+        var goodBacteriaCount = 0;
+        var playerName = "";
+        var rankingEasy = [];
+        var rankingMedium = [];
+        var rankingHard = [];
+
+        function startGame(difficulty) {
+            playerName = document.getElementById("playerName").value;
+
+            switch (difficulty) {
+                case 'easy':
+                    rows = 3;
+                    cols = 3;
+                    totalBadBacteria = 1;
+                    break;
+                case 'medium':
+                    rows = 5;
+                    cols = 5;
+                    totalBadBacteria = Math.ceil((rows * cols) / 5);
+                    break;
+                case 'hard':
+                    rows = 10;
+                    cols = 10;
+                    totalBadBacteria = Math.ceil((rows * cols) / 4);
+                    break;
+                default:
+                    rows = 5;
+                    cols = 5;
+                    totalBadBacteria = Math.ceil((rows * cols) / 5);
+                    break;
+            }
+
+            gameGrid = createGrid(rows, cols);
+            addBadBacteria(gameGrid, totalBadBacteria);
+            renderGrid(gameGrid);
+            resetCounters();
+        }
+
+        function createGrid(rows, cols) {
+            var grid = [];
+            for (var i = 0; i < rows; i++) {
+                var row = [];
+                for (var j = 0; j < cols; j++) {
+                    row.push(0);
+                }
+                grid.push(row);
+            }
+            return grid;
+        }
+
+        function addBadBacteria(grid, totalBadBacteria) {
+            var count = 0;
+            while (count < totalBadBacteria) {
+                var row = Math.floor(Math.random() * rows);
+                var col = Math.floor(Math.random() * cols);
+                if (grid[row][col] !== -1) {
+                    grid[row][col] = -1; // Bactéria ruim
+                    count++;
+                }
+            }
+        }
+
+        function renderGrid(grid) {
+            var gameContainer = document.getElementById("game");
+            gameContainer.innerHTML = "";
+
+            for (var i = 0; i < rows; i++) {
+                for (var j = 0; j < cols; j++) {
+                    var cell = document.createElement("div");
+                    cell.className = "cell";
+                    cell.setAttribute("data-row", i);
+                    cell.setAttribute("data-col", j);
+                    cell.className += " masked";
+
+                    cell.addEventListener("click", handleCellClick);
+                    gameContainer.appendChild(cell);
+                }
+                gameContainer.appendChild(document.createElement("br"));
+            }
+        }
+
+        function handleCellClick(event) {
+            var row = parseInt(event.target.getAttribute("data-row"));
+            var col = parseInt(event.target.getAttribute("data-col"));
+
+            if (gameGrid[row][col] === -1) {
+                event.target.innerHTML = "X";
+                event.target.classList.remove("masked");
+                event.target.classList.add("bad-bacteria");
+                event.target.removeEventListener("click", handleCellClick);
+                revealGrid();
+                showGameOverMessage();
+                updateRanking();
+            } else {
+                event.target.style.backgroundColor = "green";
+                event.target.classList.remove("masked");
+                event.target.classList.add("good-bacteria");
+                uncoveredCells++;
+                goodBacteriaCount++;
+
+                if (uncoveredCells === (rows * cols) - totalBadBacteria) {
+                    revealGrid();
+                    showGameWonMessage();
+                    updateRanking();
+                }
+            }
+
+            updateBacteriaCount();
+        }
+
+        function revealGrid() {
+            var gameContainer = document.getElementById("game");
+            var cells = gameContainer.getElementsByClassName("cell");
+            for (var i = 0; i < cells.length; i++) {
+                var cell = cells[i];
+                cell.classList.remove("masked");
+                var row = parseInt(cell.getAttribute("data-row"));
+                var col = parseInt(cell.getAttribute("data-col"));
+                if (gameGrid[row][col] === -1) {
+                    cell.innerHTML = "X";
+                    cell.classList.add("bad-bacteria");
+                }
+            }
+        }
+
+        function showGameOverMessage() {
+            var gameContainer = document.getElementById("game");
+            gameContainer.innerHTML += "<h2>Você precisa melhorar a saúde do seu intestino, melhorando a microbiota boa!</h2>";
+        }
+
+        function showGameWonMessage() {
+            var gameContainer = document.getElementById("game");
+            gameContainer.innerHTML += "<h2>Parabéns! Você está com sua microbiota em dia, com todas as bactérias boas coletadas!</h2>";
+        }
+
+        function updateBacteriaCount() {
+            var bacteriaCountContainer = document.getElementById("bacteriaCount");
+            bacteriaCountContainer.innerHTML = "Bactérias Boas: " + goodBacteriaCount;
+
+            var badBacteriaCountContainer = document.getElementById("badBacteriaCount");
+            badBacteriaCountContainer.innerHTML = "Bactérias Ruins: " + totalBadBacteria;
+        }
+
+        function updateRanking() {
+            var ranking;
+
+            switch (rows) {
+                case 3:
+                    ranking = rankingEasy;
+                    break;
+                case 5:
+                    ranking = rankingMedium;
+                    break;
+                case 10:
+                    ranking = rankingHard;
+                    break;
+                default:
+                    ranking = rankingMedium;
+                    break;
+            }
+
+            ranking.push({ name: playerName, score: goodBacteriaCount });
+
+            ranking.sort(function(a, b) {
+                return b.score - a.score;
+            });
+
+            var rankingTable;
+
+            switch (rows) {
+                case 3:
+                    rankingTable = document.getElementById("rankingEasy");
+                    break;
+                case 5:
+                    rankingTable = document.getElementById("rankingMedium");
+                    break;
+                case 10:
+                    rankingTable = document.getElementById("rankingHard");
+                    break;
+                default:
+                    rankingTable = document.getElementById("rankingMedium");
+                    break;
+            }
+
+            rankingTable.innerHTML = "<tr><th>Posição</th><th>Jogador</th><th>Acertos</th></tr>";
+
+            for (var i = 0; i < ranking.length; i++) {
+                var player = ranking[i];
+                var row = rankingTable.insertRow(i + 1);
+                var positionCell = row.insertCell(0);
+                var playerCell = row.insertCell(1);
+                var scoreCell = row.insertCell(2);
+
+                positionCell.innerHTML = i + 1;
+                playerCell.innerHTML = player.name;
+                scoreCell.innerHTML = player.score;
+            }
+        }
+
+        function resetCounters() {
+            uncoveredCells = 0;
+            goodBacteriaCount = 0;
+            updateBacteriaCount();
+            document.getElementById("playerName").value = "";
+        }
+
+        function newGame() {
+            var gameContainer = document.getElementById("game");
+            gameContainer.innerHTML = "";
+            document.getElementById("playerName").value = "";
+            resetCounters();
+        }
+    </script>
+</body>
+</html>
